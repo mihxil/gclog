@@ -20,7 +20,7 @@ plot();
 
 
 sub useage {
-		print <<USEAGE;
+    print <<USEAGE;
 useage:
    $0 <directory> [<from>] [<to>]\
 
@@ -30,7 +30,7 @@ where
    <from>     : Start date of the plot in the form yyyy-mm-dd. Defaults to a week ago.
    <to>       : Stop date of the plot (non inclusivie). Defaults to tomorrow.
 USEAGE
-		exit;
+    exit;
 }
 
 sub createDataFile {
