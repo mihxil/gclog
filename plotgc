@@ -1,0 +1,102 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use diagnostics;
+use Cwd;
+use DateTime;
+
+useage() if ($#ARGV == -1);
+
+my $server    = $ARGV[0];
+my $directory = getcwd() . "/" . $ARGV[0];
+my $tomorrow = DateTime->today()->add( days => 1 );
+my $lastweek  = DateTime->today()->add( days => -7 );
+
+my $from = $ARGV[1] || $lastweek->year . "-" . $lastweek->month . "-" . $lastweek-> day;
+my $to   = $ARGV[2] || $tomorrow->year . "-" . $tomorrow->month . "-" . $tomorrow-> day;
+
+createDataFile();
+plot();
+
+
+sub useage {
+		print <<USEAGE;
+useage:
+   $0 <directory> [<from>] [<to>]\
+
+where
+   <directory>: a directory relative to current working dir with gc files of the form gc.log.2013-02-21-13:01:21
+                where the date is the start time of the jvm.
+   <from>     : Start date of the plot in the form yyyy-mm-dd. Defaults to a week ago.
+   <to>       : Stop date of the plot (non inclusivie). Defaults to tomorrow.
+USEAGE
+		exit;
+}
+
+sub createDataFile {
+
+
+    open DATA, ">$directory/mem.data";
+    open RESTARTDATA, ">$directory/restarts.gp";
+    opendir DIR, $directory or die $!;
+
+    foreach(sort readdir DIR) {
+        if (/.*(\d{4})-(\d{2})-(\d{2})-(\d{2}):(\d{2}):(\d{2})/) {
+            my $filename = $_;
+            my $date = DateTime->new(
+                year => $1, month => $2, day => $3,
+                hour => $4, minute => $5, second => $6,
+                time_zone => "Europe/Amsterdam"
+                );
+            open FILE, "$directory/$_";
+            print RESTARTDATA "set arrow from '$date',graph(0,0) to '$date',graph(1,1) nohead;\n";
+            my $count = 0;
+            while (my $l = <FILE>) {
+                my @line = split /\s+/, $l;
+                if ($#line > 0 &&  $line[1] =~ /.*Full.*/i ) {
+                    my $offset = $line[0];
+                    $offset=~ s/\://g;
+                    my $time = DateTime->from_epoch(epoch => $date->epoch() + $offset);
+                    my $mem = $line[7];
+                    my @memsplit = split /[^\d]+/, $mem;
+                    my $newmem = $memsplit[1];
+                    $newmem or die $mem;
+
+                    print DATA $time . " " . $newmem . "\n";
+                    if ($count++ == 1) {
+                        print "First full gc: $l"."Data point: $time $newmem\n";
+                    }
+                }
+            }
+            close FILE;
+        }
+
+
+    }
+    closedir DIR;
+    close DATA;
+    close RESTARTDATA;
+}
+
+sub plot {
+    system "gnuplot","-e", <<"PLOT";
+
+    set xdata time;
+    set timefmt "%Y-%m-%d";
+    set xrange ["$from":"$to"];
+    set timefmt "%Y-%m-%dT%H:%M:%S";
+    set format x "%b-%d";
+    set ylabel "Memory after full gc in Mbyte";
+    load "$directory/restarts.gp";
+    plot '$directory/mem.data' using 1:(\$2/100) with lines title '$server';
+    set term png;
+    set out "$directory/mem.png";
+    replot;
+    set term svg;
+    set out "$directory/mem.svg";
+    replot;
+PLOT
+
+    print "Wrote $directory/mem.png\n";
+    print "Wrote $directory/mem.svg\n";
+}
