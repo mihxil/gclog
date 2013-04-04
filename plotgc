@@ -22,7 +22,7 @@ plot();
 sub useage {
     print <<USEAGE;
 useage:
-   $0 <directory> [<from>] [<to>]\
+   $0 <directory> [<from>] [<to>]
 
 where
    <directory>: a directory relative to current working dir with gc files of the form gc.log.2013-02-21-13:01:21
@@ -58,13 +58,15 @@ sub createDataFile {
                     $offset=~ s/\://g;
                     my $time = DateTime->from_epoch(epoch => $date->epoch() + $offset);
                     my $mem = $line[7];
-                    my @memsplit = split /[^\d]+/, $mem;
-                    my $newmem = $memsplit[1];
-                    $newmem or die $mem;
+                    if ($mem) {
+                        my @memsplit = split /[^\d]+/, $mem;
+                        my $newmem = $memsplit[1];
+                        $newmem or die $mem;
 
-                    print DATA $time . " " . $newmem . "\n";
-                    if ($count++ == 1) {
-                        print "First full gc: $l"."Data point: $time $newmem\n";
+                        print DATA $time . " " . $newmem . "\n";
+                        if ($count++ == 1) {
+                            print "First full gc: $l"."Data point: $time $newmem\n";
+                        }
                     }
                 }
             }
@@ -88,7 +90,7 @@ sub plot {
     set format x "%b-%d";
     set ylabel "Memory after full gc in Mbyte";
     load "$directory/restarts.gp";
-    plot '$directory/mem.data' using 1:(\$2/100) with lines title '$server';
+    plot '$directory/mem.data' using 1:(\$2/1000) with lines title '$server';
     set term png;
     set out "$directory/mem.png";
     replot;
