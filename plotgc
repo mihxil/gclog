@@ -50,13 +50,14 @@ sub createDataFile {
                 );
             open FILE, "$directory/$_";
             print RESTARTDATA "set arrow from '$date',graph(0,0) to '$date',graph(1,1) nohead;\n";
+            print DATA "#${filename}\n";
             my $count = 0;
             while (my $l = <FILE>) {
                 my @line = split /\s+/, $l;
                 if ($#line > 0 &&  $line[1] =~ /.*Full.*/i ) {
                     my $offset = $line[0];
                     $offset=~ s/\://g;
-                    my $time = DateTime->from_epoch(epoch => $date->epoch() + $offset);
+                    my $time = DateTime->from_epoch(epoch => $date->epoch() + $offset, time_zone => "Europe/Amsterdam");
                     my $mem = $line[7];
                     if ($mem) {
                         my @memsplit = split /[^\d]+/, $mem;
@@ -87,7 +88,7 @@ sub plot {
     set timefmt "%Y-%m-%d";
     set xrange ["$from":"$to"];
     set timefmt "%Y-%m-%dT%H:%M:%S";
-    set format x "%b-%d";
+    set format x "%b-%d %H";
     set ylabel "Memory after full gc in Mbyte";
     load "$directory/restarts.gp";
     plot '$directory/mem.data' using 1:(\$2/1000) with lines title '$server';
