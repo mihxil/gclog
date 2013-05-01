@@ -14,11 +14,14 @@ where
 prequisites
 
 
-
 Perl-mdules:
+```
 sudo cpan DateTime
 sudo cpan install List::MoreUtils
 sudo cpan install Params::Util
+```
 
 And gnuplot to make the pictures:
+```
 sudo port install gnuplot
+```
